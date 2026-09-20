@@ -88,16 +88,16 @@ void validateFieldValues(nlohmann::json& jsonObject) {
 	std::vector<std::string> errors;
 	// step
 	std::string step = jsonObject.at("step").get<std::string>();
-	bool isValid = false;
+	bool isStepValid = false;
 	std::vector<std::string> validSteps;
 	size_t validStepsCount = static_cast<size_t>(Step::ImportTable) - 1; // ImportTable is at last place, and both None and Importtable are invalid
 	validSteps.reserve(validStepsCount);
 	for (size_t i = 1; i < validStepsCount; ++i) {
 		std::string validStep = nlohmann::json(static_cast<Step>(i)).get<std::string>();
-		isValid = isValid || step == validStep;
+		isStepValid = isStepValid || step == validStep;
 		validSteps.push_back("'" + validStep + "'");
 	}
-	if (!isValid) {
+	if (!isStepValid) {
 		errors.push_back("Invalid value '" + step + "' for field 'step'. Valid values are: " + joinStrings(validSteps) + ".");
 	}
 	// metric
