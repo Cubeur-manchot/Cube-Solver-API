@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "build",
+			"type": "shell",
+			"command": "mingw32-make -f Makefile.windows",
+			"group": { "kind": "build", "isDefault": true }
+		},
+		{
+			"label": "clean-build",
+			"type": "shell",
+			"command": "mingw32-make -f Makefile.windows clean-build",
+            "group": "build"
+		},
+        {
+            "label": "update-clean-build",
+            "type": "shell",
+            "command": "mingw32-make -f Makefile.windows update-clean-build",
+            "group": "build"
+        }
+	]
+}

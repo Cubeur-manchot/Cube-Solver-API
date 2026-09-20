@@ -1,0 +1,47 @@
+CXX       = g++
+CXXFLAGS  = -g -Wall -fexceptions -std=c++23 -I333_Solver_cmd -Icpp-httplib -D_WIN32_WINNT=0x0A00 -MMD -MP
+LDFLAGS   = -lws2_32
+RM        = C:/Program Files/Git/usr/bin/rm.exe
+TARGET    = main
+BUILD_DIR = build
+
+SRCS      = main.cpp \
+		   handle_request.cpp \
+		   build_input.cpp \
+           333_Solver_cmd/Coord.cpp \
+           333_Solver_cmd/Cubie.cpp \
+           333_Solver_cmd/Move.cpp \
+           333_Solver_cmd/Solver.cpp \
+           333_Solver_cmd/Table.cpp
+
+OBJS = $(SRCS:%.cpp=$(BUILD_DIR)/%.o)
+DEPS = $(OBJS:.o=.d)
+
+BIN = $(BUILD_DIR)/$(TARGET).exe
+
+THIS_MAKEFILE := $(firstword $(MAKEFILE_LIST))
+
+.DEFAULT_GOAL := all
+
+-include $(DEPS)
+
+all: $(BIN)
+
+$(BIN): $(OBJS)
+	$(CXX) $(OBJS) -o $(BIN) $(LDFLAGS)
+
+$(BUILD_DIR)/%.o: %.cpp
+	@if not exist "$(dir $@)" mkdir "$(dir $@)"
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+clean:
+	$(RM) -rf $(BUILD_DIR)
+
+clean-build:
+	$(MAKE) -f $(THIS_MAKEFILE) clean
+	$(MAKE) -f $(THIS_MAKEFILE)
+
+update-clean-build:
+	cd 333_Solver_cmd && git fetch && git rebase origin/main
+	cd cpp-httplib    && git fetch && git rebase origin/master
+	$(MAKE) -f $(THIS_MAKEFILE) clean-build

@@ -1,0 +1,8 @@
+[submodule "333_Solver_cmd"]
+	path = 333_Solver_cmd
+	url = https://github.com/AMoutal/333_Solver_cmd
+	branch = main
+[submodule "cpp-httplib"]
+	path = cpp-httplib
+	url = https://github.com/yhirose/cpp-httplib
+	branch = master
