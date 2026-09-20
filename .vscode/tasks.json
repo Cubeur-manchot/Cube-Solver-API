@@ -2,22 +2,25 @@
 	"version": "2.0.0",
 	"tasks": [
 		{
-			"label": "build",
+			"label": "build-debug",
 			"type": "shell",
-			"command": "mingw32-make -f Makefile.windows",
+			"command": "mingw32-make BUILD=debug",
 			"group": { "kind": "build", "isDefault": true }
 		},
 		{
-			"label": "clean-build",
+			"label": "clean-build-debug",
 			"type": "shell",
-			"command": "mingw32-make -f Makefile.windows clean-build",
-            "group": "build"
+			"command": "mingw32-make BUILD=debug clean build"
 		},
         {
-            "label": "update-clean-build",
+            "label": "update-clean-build-debug",
             "type": "shell",
-            "command": "mingw32-make -f Makefile.windows update-clean-build",
-            "group": "build"
-        }
+            "command": "mingw32-make BUILD=debug update clean build"
+        },
+		{
+			"label": "run-release",
+			"type": "shell",
+			"command": "mingw32-make update clean build && build/main.exe"
+		}
 	]
 }
