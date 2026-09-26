@@ -1,5 +1,6 @@
-#include "build_input.hpp"
 #include <ranges>
+
+#include "build_input.hpp"
 
 Input buildInput(const std::string& body) {
 	nlohmann::json jsonInput = parseJsonObject(body);
