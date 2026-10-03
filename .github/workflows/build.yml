@@ -19,6 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+          token: ${{ secrets.READONLY_ACCESS_TOKEN_333_SOLVER_CMD }}
 
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
