@@ -15,12 +15,15 @@ std::string getEnvironmentVariable(const char* variableName, const std::string& 
 }
 
 int main() {
-	std::cout << "Entering main" << std::endl;
+	std::cout << "Application starts." << std::endl;
     const std::string host = getEnvironmentVariable("APP_HOST", "127.0.0.1");
     const int port = std::stoi(getEnvironmentVariable("APP_PORT", "8080"));
 	httplib::Server server;
 	server.Post("/solve", handleSolveRequest);
 	std::cout << "Server listening on http://" << host << ":" << port << "..." << std::endl;
-    server.listen(host, port);
+    if (!server.listen(host, port)) {
+		std::cerr << "Failed to listen on " << host << ":" << port << std::endl;
+		return 1;
+	}
     return 0;
 }
