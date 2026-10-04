@@ -25,7 +25,6 @@ jobs:
         uses: google-github-actions/auth@v3
         with:
           workload_identity_provider: projects/1067445120994/locations/global/workloadIdentityPools/github-actions/providers/github
-          service_account: github-actions@cube-solver-api-510122.iam.gserviceaccount.com
 
       - name: Configure Docker for Artifact Registry
         run: gcloud auth configure-docker europe-west1-docker.pkg.dev --quiet
