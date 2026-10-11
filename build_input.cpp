@@ -77,6 +77,22 @@ void validateFieldPresenceAndType(const nlohmann::json& jsonObject) {
 	}
 }
 
+struct StepAlias {
+	std::string_view english;
+	std::string_view french;
+};
+
+constexpr auto stepAliases = std::to_array<StepAlias>({
+	{"Cross", "Croix"},
+	{"Cross+1", "Croix+1"},
+	{"Cross+2", "Croix+2"},
+	{"Cross+3", "Croix+3"},
+	{"Cross+4", "Croix+4"},
+});
+
+void normalizeStepName(nlohmann::json& jsonObject) { // if step name is in English, translate it to French, because French is expected by the solver
+	std::string& stepName = jsonObject.at("step").get_ref<std::string&>();
+	const auto matchingAlias = std::ranges::find(stepAliases, stepName, &StepAlias::english);
 	if (matchingAlias != stepAliases.end()) {
 		stepName = matchingAlias->french;
 	}
