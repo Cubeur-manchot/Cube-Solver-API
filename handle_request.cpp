@@ -1,21 +1,7 @@
+#include "333_Solver_cmd/Output.hpp"
 #include "handle_request.hpp"
+#include "api_error.hpp"
 #include "build_input.hpp"
-
-void handleSolveRequest(const httplib::Request& req, httplib::Response& res) {
-    try {
-		Input input = buildInput(req.body);
-		std::vector<std::string> solutions = runSolver(input);
-		res.status = 200;
-		res.set_content(nlohmann::json(solutions).dump(), "application/json");
-	} catch (const ApiError& e) {
-		res.status = e.status;
-		res.set_content(e.to_json().dump(), "application/json");
-	} catch (const std::exception& e) {
-		std::cerr << "Internal server error: " << e.what() << std::endl;
-		res.status = 500;
-		res.set_content(nlohmann::json{{"error", "Internal server error"}}.dump(), "application/json");
-	}
-}
 
 std::vector<std::string> runSolver(Input const& input) {
 	try {
@@ -27,5 +13,21 @@ std::vector<std::string> runSolver(Input const& input) {
 		return output.solutions;
 	} catch (const std::exception& e) {
 		throw ApiError::internal(std::string("Error during solving: ") + e.what());
+	}
+}
+
+void handleSolveRequest(const httplib::Request& req, httplib::Response& res) {
+	try {
+		Input input = buildInput(req.body);
+		std::vector<std::string> solutions = runSolver(input);
+		res.status = 200;
+		res.set_content(nlohmann::json(solutions).dump(), "application/json");
+	} catch (const ApiError& e) {
+		res.status = e.status;
+		res.set_content(e.to_json().dump(), "application/json");
+	} catch (const std::exception& e) {
+		std::cerr << "Internal server error: " << e.what() << std::endl;
+		res.status = 500;
+		res.set_content(nlohmann::json{{"error", "Internal server error"}}.dump(), "application/json");
 	}
 }
