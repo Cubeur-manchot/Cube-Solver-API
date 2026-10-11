@@ -1,13 +1,10 @@
+#include <string>
+#include <regex>
 #include <ranges>
 
+#include "333_Solver_cmd/json.hpp"
 #include "build_input.hpp"
-
-Input buildInput(const std::string& body) {
-	nlohmann::json jsonInput = parseJsonObject(body);
-	validateJsonInput(jsonInput);
-	Input input = createInput(jsonInput);
-	return input;
-}
+#include "api_error.hpp"
 
 nlohmann::json parseJsonObject(const std::string& jsonString) {
 	nlohmann::json jsonObject;
@@ -22,9 +19,19 @@ nlohmann::json parseJsonObject(const std::string& jsonString) {
 	return jsonObject;
 }
 
-void validateJsonInput(nlohmann::json& jsonObject) {
-	validateFieldPresenceAndType(jsonObject);
-	validateFieldValues(jsonObject);
+bool is_non_empty_array_of_strings(const nlohmann::json& jsonObject) {
+    if (!jsonObject.is_array()) {
+		return false;
+	}
+    if (jsonObject.empty()) {
+		return false;
+	}
+    for (const auto& item : jsonObject) {
+        if (!item.is_string()) {
+            return false;
+        }
+    }
+    return true;
 }
 
 void validateFieldPresenceAndType(const nlohmann::json& jsonObject) {
@@ -35,7 +42,7 @@ void validateFieldPresenceAndType(const nlohmann::json& jsonObject) {
 		std::string typeName;
 		bool isArrayOfStrings = false;
 	};
-	std::vector<Field> fields = {
+	static const std::vector<Field> fields = {
 		{"scramble", &nlohmann::json::is_string, "string"},
 		{"step", &nlohmann::json::is_string, "string"},
 		{"allowedMoves", &nlohmann::json::is_array, "non-empty array of strings", true},
@@ -70,22 +77,17 @@ void validateFieldPresenceAndType(const nlohmann::json& jsonObject) {
 	}
 }
 
-bool is_non_empty_array_of_strings(const nlohmann::json& jsonObject) {
-    if (!jsonObject.is_array()) {
-		return false;
 	}
-    if (jsonObject.empty()) {
-		return false;
-	}
-    for (const auto& item : jsonObject) {
-        if (!item.is_string()) {
-            return false;
-        }
-    }
-    return true;
 }
 
-void validateFieldValues(nlohmann::json& jsonObject) {
+std::vector<std::string_view> splitString(std::string_view text, char delimiter = ' ') {
+	return text | std::views::split(delimiter)
+	            | std::views::filter([](auto&& token) { return !token.empty(); })
+	            | std::views::transform([](auto&& token) { return std::string_view(token); })
+	            | std::ranges::to<std::vector>();
+}
+
+void validateFieldValues(const nlohmann::json& jsonObject) {
 	std::vector<std::string> errors;
 	// step
 	std::string step = jsonObject.at("step").get<std::string>();
@@ -102,21 +104,20 @@ void validateFieldValues(nlohmann::json& jsonObject) {
 		errors.push_back("Invalid value '" + step + "' for field 'step'. Valid values are: " + joinStrings(validSteps) + ".");
 	}
 	// metric
-	std::string metric = jsonObject.at("metric").get<std::string>();
+	const std::string& metric = jsonObject.at("metric").get_ref<const std::string&>();
 	if (metric != "HTM" && metric != "QTM") {
 		errors.push_back("Invalid value '" + metric + "' for field 'metric'. Valid values are: 'HTM', 'QTM'.");
 	}
 	// allowedMoves
 	static const std::regex pattern(R"(^([UFRDBL]w?|[ufrdblEMSxyz])[123]?'?$)");
-	for (auto& move : jsonObject.at("allowedMoves")) {
-        auto moveString = move.get<std::string>();
         if (!std::regex_match(moveString, pattern)) {
+	for (const auto& move : jsonObject.at("allowedMoves")) {
+        const std::string& moveString = move.get_ref<const std::string&>();
             errors.push_back("Invalid move in 'allowedMoves': '" + moveString + "'.");
-			continue;
         }
     }
 	// scramble
-	std::string scramble = jsonObject.at("scramble").get<std::string>();
+	const std::string& scramble = jsonObject.at("scramble").get_ref<const std::string&>();
 	auto moves = splitString(scramble);
 	if (moves.empty()) {
 		errors.push_back("Field 'scramble' must contain at least one move.");
@@ -163,13 +164,9 @@ std::string joinStrings(const std::vector<std::string>& strings, const std::stri
     return result;
 }
 
-std::vector<std::string> splitString(const std::string& string, const std::regex& delimiter) {
-    auto tokens = std::vector<std::string>(
-        std::sregex_token_iterator(string.begin(), string.end(), delimiter, -1),
-        std::sregex_token_iterator{}
-    );
-    return tokens | std::views::filter([](const std::string& s) { return !s.empty(); })
-                  | std::ranges::to<std::vector>();  // C++23
+void validateJsonInput(nlohmann::json& jsonObject) {
+	validateFieldPresenceAndType(jsonObject);
+	validateFieldValues(jsonObject);
 }
 
 Input createInput(const nlohmann::json& jsonObject) {
@@ -178,4 +175,11 @@ Input createInput(const nlohmann::json& jsonObject) {
 	} catch (const nlohmann::json::exception& e) {
 		throw ApiError::validationError(std::string("Invalid input format: ") + e.what());
 	}
+}
+
+Input buildInput(const std::string& body) {
+	nlohmann::json jsonInput = parseJsonObject(body);
+	validateJsonInput(jsonInput);
+	Input input = createInput(jsonInput);
+	return input;
 }
