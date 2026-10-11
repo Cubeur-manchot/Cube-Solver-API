@@ -131,20 +131,17 @@ void validateFieldValues(const nlohmann::json& jsonObject) {
 	// minMoves, maxMoves
 	unsigned int minMoves = jsonObject.at("minMoves").get<unsigned int>();
 	unsigned int maxMoves = jsonObject.at("maxMoves").get<unsigned int>();
-	if (minMoves == 0 || maxMoves == 0 || maxMoves >= 25) {
-		if (minMoves == 0) {
-			errors.push_back("Field 'minMoves' must be a strictly positive integer.");
-		}
-		if (maxMoves == 0) {
-			errors.push_back("Field 'maxMoves' must be a strictly positive integer.");
-		}
-		if (maxMoves >= 25) {
-			errors.push_back("Field 'maxMoves' must be strictly lower than 25.");
-		}
-	} else {
-		if (minMoves > maxMoves) {
-			errors.push_back("Field 'maxMoves' must be greater than or equal to 'minMoves'.");
-		}
+	if (minMoves == 0) {
+		errors.push_back("Field 'minMoves' must be a strictly positive integer.");
+	}
+	if (maxMoves == 0) {
+		errors.push_back("Field 'maxMoves' must be a strictly positive integer.");
+	}
+	if (maxMoves >= 25) {
+		errors.push_back("Field 'maxMoves' must be strictly lower than 25.");
+	}
+	if (minMoves > maxMoves && maxMoves > 0 && maxMoves < 25) {
+		errors.push_back("Field 'maxMoves' must be greater than or equal to 'minMoves'.");
 	}
 	if (!errors.empty()) {
 		throw ApiError::validationErrorMultiple(errors);
