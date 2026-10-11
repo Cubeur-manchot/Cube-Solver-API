@@ -77,7 +77,44 @@ void validateFieldPresenceAndType(const nlohmann::json& jsonObject) {
 	}
 }
 
+	if (matchingAlias != stepAliases.end()) {
+		stepName = matchingAlias->french;
 	}
+}
+
+struct ValidSteps {
+	std::vector<std::string> frenchNames;
+	std::string englishNamesMessage;
+};
+
+std::string_view toEnglishStepName(std::string_view frenchName) {
+	const auto matchingAlias = std::ranges::find(stepAliases, frenchName, &StepAlias::french);
+	return matchingAlias != stepAliases.end() ? matchingAlias->english : frenchName;
+}
+
+const ValidSteps& getValidSteps() {
+	static const ValidSteps validSteps = [] {
+		constexpr size_t firstValidStep = static_cast<size_t>(Step::None) + 1; // None appears first and is excluded
+		constexpr size_t stepsEnd = static_cast<size_t>(Step::ImportTable); // ImportTable appears last and is excluded
+		ValidSteps result;
+		std::vector<std::string> quotedEnglishNames;
+		result.frenchNames.reserve(stepsEnd - firstValidStep);
+		quotedEnglishNames.reserve(stepsEnd - firstValidStep);
+		for (size_t stepIndex = firstValidStep; stepIndex < stepsEnd; ++stepIndex) {
+			std::string frenchName = nlohmann::json(static_cast<Step>(stepIndex)).get<std::string>();
+			quotedEnglishNames.push_back("'" + std::string(toEnglishStepName(frenchName)) + "'");
+			result.frenchNames.push_back(std::move(frenchName));
+		}
+		result.englishNamesMessage = quotedEnglishNames | std::views::join_with(std::string_view(", ")) | std::ranges::to<std::string>();
+		return result;
+	}();
+	return validSteps;
+}
+
+static const std::regex movePattern(R"(([UFRDBL]w?|[ufrdblEMSxyz])[123]?'?)");
+
+bool isValidMove(std::string_view move) {
+	return std::regex_match(move.begin(), move.end(), movePattern);
 }
 
 std::vector<std::string_view> splitString(std::string_view text, char delimiter = ' ') {
@@ -90,18 +127,10 @@ std::vector<std::string_view> splitString(std::string_view text, char delimiter 
 void validateFieldValues(const nlohmann::json& jsonObject) {
 	std::vector<std::string> errors;
 	// step
-	std::string step = jsonObject.at("step").get<std::string>();
-	bool isStepValid = false;
-	std::vector<std::string> validSteps;
-	size_t validStepsCount = static_cast<size_t>(Step::ImportTable) - 1; // ImportTable is at last place, and both None and Importtable are invalid
-	validSteps.reserve(validStepsCount);
-	for (size_t i = 1; i < validStepsCount; ++i) {
-		std::string validStep = nlohmann::json(static_cast<Step>(i)).get<std::string>();
-		isStepValid = isStepValid || step == validStep;
-		validSteps.push_back("'" + validStep + "'");
-	}
-	if (!isStepValid) {
-		errors.push_back("Invalid value '" + step + "' for field 'step'. Valid values are: " + joinStrings(validSteps) + ".");
+	const std::string& step = jsonObject.at("step").get_ref<const std::string&>();
+	const ValidSteps& validSteps = getValidSteps();
+	if (!std::ranges::contains(validSteps.frenchNames, step)) {
+		errors.push_back("Invalid value '" + step + "' for field 'step'. Valid values are: " + validSteps.englishNamesMessage + ".");
 	}
 	// metric
 	const std::string& metric = jsonObject.at("metric").get_ref<const std::string&>();
@@ -110,9 +139,9 @@ void validateFieldValues(const nlohmann::json& jsonObject) {
 	}
 	// allowedMoves
 	static const std::regex pattern(R"(^([UFRDBL]w?|[ufrdblEMSxyz])[123]?'?$)");
-        if (!std::regex_match(moveString, pattern)) {
 	for (const auto& move : jsonObject.at("allowedMoves")) {
         const std::string& moveString = move.get_ref<const std::string&>();
+        if (!isValidMove(moveString)) {
             errors.push_back("Invalid move in 'allowedMoves': '" + moveString + "'.");
         }
     }
@@ -123,8 +152,8 @@ void validateFieldValues(const nlohmann::json& jsonObject) {
 		errors.push_back("Field 'scramble' must contain at least one move.");
 	} else {
 		for (const auto& move : moves) {
-			if (!std::regex_match(move, pattern)) {
-				errors.push_back("Invalid move in 'scramble': '" + move + "'.");
+			if (!isValidMove(move)) {
+				errors.push_back("Invalid move in 'scramble': '" + std::string(move) + "'.");
 			}
 		}
 	}
@@ -148,21 +177,9 @@ void validateFieldValues(const nlohmann::json& jsonObject) {
 	}
 }
 
-std::string joinStrings(const std::vector<std::string>& strings, const std::string& separator) {
-    if (strings.empty()) {
-		return "";
-	}
-    std::string result = strings.front();
-    for (auto it = std::next(strings.begin()); it != strings.end(); ++it)
-    {
-        result += separator;
-        result += *it;
-    }
-    return result;
-}
-
-void validateJsonInput(nlohmann::json& jsonObject) {
+void validateAndNormalizeJsonInput(nlohmann::json& jsonObject) {
 	validateFieldPresenceAndType(jsonObject);
+	normalizeStepName(jsonObject);
 	validateFieldValues(jsonObject);
 }
 
@@ -176,7 +193,7 @@ Input createInput(const nlohmann::json& jsonObject) {
 
 Input buildInput(const std::string& body) {
 	nlohmann::json jsonInput = parseJsonObject(body);
-	validateJsonInput(jsonInput);
+	validateAndNormalizeJsonInput(jsonInput);
 	Input input = createInput(jsonInput);
 	return input;
 }
